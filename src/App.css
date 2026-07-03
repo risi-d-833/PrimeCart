@@ -1,0 +1,42 @@
+@import "tailwindcss";
+/* Custom Loader Animations */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes progress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 1.4s linear infinite;
+}
+
+.animate-progress {
+  animation: progress 2200ms linear forwards;
+}
+/* Hide default cursor */
+html,
+body,
+* {
+  cursor: none;
+}
+
+.cursor-hover {
+  cursor: none;
+}
+
+::selection {
+  background: #d6b98c;
+  color: #1f1f1f;
+}
+
+@media (hover: none) {
+  html,
+  body,
+  * {
+    cursor: auto;
+  }
+}
