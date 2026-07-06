@@ -10,6 +10,13 @@ import {
   User,
   X,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import {
+  loginUser,
+  registerUser,
+  resendOtp as resendOtpApi,
+  verifyOtp as verifyOtpApi,
+} from "../../api/auth.api";
 
 export default function AuthModal({ open, onClose }) {
   const [screen, setScreen] = useState("login");
@@ -102,18 +109,23 @@ export default function AuthModal({ open, onClose }) {
     return valid;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (screen === "register") {
       if (!validateRegister()) return;
 
       setLoading(true);
-      window.setTimeout(() => {
-        setLoading(false);
+      try {
+        const res = await registerUser(form);
+        toast.success(res.data.message || "OTP sent successfully");
         setScreen("otp");
         setOtp(["", "", "", "", "", ""]);
         setTimer(30);
         setCanResend(false);
-      }, 1200);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Registration Failed");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -127,11 +139,19 @@ export default function AuthModal({ open, onClose }) {
     }
 
     setLoading(true);
-    window.setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await loginUser({
+        email: form.email,
+        password: form.password,
+      });
+
+      toast.success(res.data.message || "Login successful");
       closeModal();
-      alert("Login successful");
-    }, 1200);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Login Failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOtpChange = (value, index) => {
@@ -152,31 +172,56 @@ export default function AuthModal({ open, onClose }) {
     }
 
     if (e.key === "Enter" && index === 5) {
-      verifyOtp();
+      verifyOtpHandler();
     }
   };
 
-  const resendOtp = () => {
-    setOtp(["", "", "", "", "", ""]);
-    setTimer(30);
-    setCanResend(false);
-    inputRefs.current[0]?.focus();
-  };
-
-  const verifyOtp = () => {
-    const code = otp.join("");
-
-    if (code.length !== 6) {
-      alert("Please enter the complete 6-digit OTP");
+  const resendOtp = async () => {
+    if (!form.email) {
+      toast.error("Email is required to resend OTP");
       return;
     }
 
     setLoading(true);
-    window.setTimeout(() => {
+    try {
+      await resendOtpApi({ email: form.email });
+      toast.success("OTP Sent Again");
+      setOtp(["", "", "", "", "", ""]);
+      setTimer(30);
+      setCanResend(false);
+      inputRefs.current[0]?.focus();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Unable to resend OTP");
+    } finally {
       setLoading(false);
-      closeModal();
-      alert("Account created successfully");
-    }, 1500);
+    }
+  };
+
+  const verifyOtpHandler = async () => {
+    const code = otp.join("");
+
+    if (code.length !== 6) {
+      toast.error("Please enter the complete 6-digit OTP");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await verifyOtpApi({
+        email: form.email,
+        otp: code,
+      });
+
+      toast.success("Account Verified");
+      setScreen("login");
+      setOtp(["", "", "", "", "", ""]);
+      setTimer(30);
+      setCanResend(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "OTP verification failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const closeModal = () => {
@@ -397,7 +442,7 @@ export default function AuthModal({ open, onClose }) {
 
               <button
                 type="button"
-                onClick={verifyOtp}
+                onClick={verifyOtpHandler}
                 disabled={loading}
                 className="mt-8 w-full rounded-full bg-black py-3 font-semibold text-white transition hover:bg-[#8A6E4B] disabled:cursor-not-allowed disabled:opacity-70"
               >
